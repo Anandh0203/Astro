@@ -3,47 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cosmic Nexus | Simple AI Astrologer</title>
+    <title>Cosmic Nexus | AI Astrologer</title>
     
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; text-align: center; }
-        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 12px; }
-        input, button { width: 90%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #475569; }
-        button { background: #4f46e5; color: white; font-weight: bold; cursor: pointer; border: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        h1 { color: #818cf8; margin-bottom: 5px; }
+        p { color: #94a3b8; margin-top: 0; }
+        
+        input, select, button { width: 90%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
+        button { background: #4f46e5; font-weight: bold; border: none; cursor: pointer; transition: 0.3s; }
         button:hover { background: #4338ca; }
-        #output { text-align: left; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; }
-        .error { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 5px; }
+        button:disabled { background: #64748b; cursor: not-allowed; }
+        
+        #output { text-align: left; margin-top: 20px; white-space: pre-wrap; line-height: 1.6; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; display: none; }
+        .error { color: #ef4444; font-weight: bold; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 5px; display: block; margin-top: 10px;}
+        .status { color: #fbbf24; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>🔮 Cosmic Nexus</h1>
-    <p>Zero-Dependency Version (Fixed Model)</p>
+    <p>Zero-Dependency (Universal Model)</p>
 
     <input type="password" id="apiKey" placeholder="Step 1: Paste Gemini API Key Here">
     <input type="text" id="name" placeholder="Name">
+    
     <div style="display: flex; justify-content: center; gap: 5px; width: 94%; margin: 0 auto;">
         <input type="date" id="dob" style="width: 50%;">
         <input type="time" id="tob" style="width: 50%;">
     </div>
+    
     <input type="text" id="city" placeholder="City (e.g. Chennai)">
+    
+    <select id="modelSelect">
+        <option value="gemini-pro">Model: Gemini Pro (Stable)</option>
+        <option value="gemini-1.5-flash">Model: Gemini 1.5 Flash (Fast)</option>
+    </select>
     
     <button onclick="runApp()" id="btn">Reveal Destiny</button>
     
-    <div id="status" style="margin-top:10px; color:#cbd5e1;"></div>
+    <div id="status" class="status"></div>
     <div id="output"></div>
 </div>
 
 <script>
-    // --- 1. INTERNAL CALCULATION MATH (No Libraries) ---
+    // --- 1. INTERNAL MATH (Calculates Planets) ---
     function calculatePlanets(dateStr, timeStr) {
-        // Simple algorithm to get approx positions
         const d = new Date(dateStr + "T" + timeStr);
         const day = (d - new Date("2000-01-01T12:00:00Z")) / 86400000;
         const ayanamsa = 23.85 + (day / 365.25) * 0.0139;
 
-        // Approx Orbital Data (Mean Longitude)
         const bodies = {
             'Sun': 280.466 + 0.9856474 * day,
             'Moon': 218.316 + 13.176396 * day,
@@ -60,14 +71,10 @@
 
         for (let planet in bodies) {
             let lon = bodies[planet];
-            
-            // Add simplified Equation of Center for accuracy boost
             let M = (lon % 360) * (Math.PI / 180); 
             if(planet === 'Sun') lon += 1.915 * Math.sin(M);
             if(planet === 'Moon') lon += 6.289 * Math.sin(M);
-            // (Keeping it simple for stability)
 
-            // Convert to Sidereal (Vedic)
             let sidereal = (lon - ayanamsa) % 360;
             if (sidereal < 0) sidereal += 360;
 
@@ -85,6 +92,8 @@
         const dob = document.getElementById('dob').value;
         const tob = document.getElementById('tob').value;
         const city = document.getElementById('city').value;
+        const modelId = document.getElementById('modelSelect').value; // User selected model
+        
         const status = document.getElementById('status');
         const output = document.getElementById('output');
 
@@ -94,17 +103,16 @@
         }
 
         status.innerText = "⏳ Calculating Planets...";
-        output.innerText = "";
+        output.style.display = "none";
         document.getElementById('btn').disabled = true;
 
         try {
             // Step A: Calculate
             const planetData = calculatePlanets(dob, tob);
             
-            status.innerText = "✨ Consulting the Stars (Asking Gemini)...";
+            status.innerText = "✨ Consulting the Stars...";
 
             // Step B: Ask Gemini
-            // UPDATED MODEL: Using 'gemini-1.5-flash-latest' which is more robust
             const prompt = `
             Act as an expert Vedic Astrologer. 
             User: ${name}, Born: ${dob} ${tob} in ${city}.
@@ -122,8 +130,9 @@
             Do NOT use markdown symbols like ** or ##. Just use plain text with nice spacing.
             `;
 
-            // We use 'gemini-1.5-flash-latest' to fix the version error
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`, {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`;
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -133,14 +142,15 @@
 
             // Error Handling
             if (data.error) throw new Error(data.error.message);
-            if (!data.candidates) throw new Error("AI blocked the request (Safety/Filters). Try again.");
+            if (!data.candidates) throw new Error("AI blocked the request. Try again.");
 
             // Success
-            status.innerText = "✅ Analysis Complete!";
+            status.innerText = "";
             output.innerText = data.candidates[0].content.parts[0].text;
+            output.style.display = "block";
 
         } catch (err) {
-            status.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+            status.innerHTML = `<span class="error">Error: ${err.message}</span>`;
         } finally {
             document.getElementById('btn').disabled = false;
         }
