@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cosmic Nexus | AI Astrologer</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy-browser.min.js"></script>
+    
+    <script src="https://unpkg.com/astronomy-engine@2.1.19/lib/astronomy.min.js"></script>
     
     <style>
         :root {
@@ -77,7 +78,7 @@
             border: 1px solid #475569;
             background-color: #0f172a;
             color: white;
-            box-sizing: border-box; /* Fix padding issue */
+            box-sizing: border-box;
         }
 
         input:focus {
@@ -118,7 +119,7 @@
         }
 
         #result {
-            display: none; /* Hidden by default */
+            display: none;
             line-height: 1.7;
         }
 
@@ -229,12 +230,7 @@
         // Create Date object
         const dt = new Date(dateStr + 'T' + timeStr);
         
-        // Astronomy Engine works in UTC. We'll assume the input time is roughly UTC 
-        // for simplicity in this frontend-only demo, or rely on browser interpretation.
-        // For 'app' level precision, we normally handle timezones explicitly.
-        
         // 1. Calculate Ayanamsa (Lahiri Approximation)
-        // Rate: ~50.29 arcseconds per year since 1900
         const year = dt.getFullYear();
         const ayanamsa = 23.85 + (year - 2000) * 0.0139; 
 
@@ -246,7 +242,7 @@
         let positions = "";
         
         bodies.forEach(body => {
-            // Get Tropical Position
+            // Get Tropical Position from Astronomy Engine
             const result = Astronomy.Ecliptic(body, dt);
             let tropicalLon = result.elon; // In degrees
             
@@ -259,9 +255,6 @@
                            "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
             const signIndex = Math.floor(siderealLon / 30);
             const degree = (siderealLon % 30).toFixed(2);
-            
-            // Special handling for Nodes (Rahu/Ketu) - Simple approximation based on Moon node
-            // Note: Astronomy Engine has MoonNode, but usually Mean Node.
             
             positions += `- ${body}: ${signs[signIndex]} (${degree}°)\n`;
         });
